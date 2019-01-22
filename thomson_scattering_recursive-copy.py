@@ -247,7 +247,6 @@ Ne = np.array(Ne)
 Ne_min = np.nanmin(Ne)
 Ne_max = np.nanmax(Ne)
 
-np.save('Ne_v3.npy',Ne)
 
 # for idx,item in enumerate(Ne):
 #     plt.imshow(item,origin='lower',cmap='rainbow',vmin=Ne_min,vmax=Ne_max,extent=[0,63*arpi,0,63*arpi])

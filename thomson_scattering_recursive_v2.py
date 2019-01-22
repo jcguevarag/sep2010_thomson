@@ -30,6 +30,8 @@ import pickle
 import warnings
 from scipy import stats
 warnings.filterwarnings('ignore')
+np.seterr(divide='ignore', invalid='ignore')
+
 
 #Data for basic calculations, extract shape, etc
 # datatest = sunpy.map.Map('Stokes_IQUV_averages/hmi.S_90s.20170910_123600_TAI.3I_recentered.medians_4pics.meanvalue.fits').data
@@ -41,14 +43,14 @@ xc = 2048
 yc = 2048
 inclang = -8.81220944
 #Region over the event, position and large in pixels
-xpos = 60 #bottom left rectangle
-ypos = 2310 # bottom left rectangle
-bsz = 50 #height and width rectangle
+# xpos = 60 #bottom left rectangle
+# ypos = 2310 # bottom left rectangle
+# bsz = 50 #height and width rectangle
 
 
-# xpos = 30 #bottom left rectangle
-# ypos = 2200 # bottom left rectangle
-# bsz = 300 #height and width rectangle
+xpos = 30 #bottom left rectangle
+ypos = 2290 # bottom left rectangle
+bsz = 107 #height and width rectangle
 
 #rectangle or region widht an inclination angle of 10 to aligned with loop
 r = matplotlib.patches.Rectangle((xpos,ypos),bsz,bsz,angle=inclang,linewidth=1,edgecolor='r',facecolor='none')
@@ -77,8 +79,8 @@ for idx,item in enumerate(enc_coor):
 grid_Pol = np.empty(np.shape(datatest)) * np.nan #same size as data but empty, it will Fill with theoretical pol values
 for idx,item in enumerate(enc_coor):
     grid_Pol[item[1],item[0]] = pol_step1[idx]
-grid_Th = grid_Th[2300:2363,57:120]
-grid_Pol = grid_Pol[2300:2363,57:120]
+grid_Th = grid_Th[2270:2405,25:160]
+grid_Pol = grid_Pol[2270:2405,25:160]
 refw = int(bsz/2)
 # I_0 = np.nanmean(datatest[yc-refw:yc+refw,xc-refw:xc+refw])
 # # I_0 = np.nanmean(datatest[600-refw:600+refw,700-refw:700+refw])
@@ -152,7 +154,7 @@ for item in I_files:
     grid_Isc = np.empty(np.shape(I_data)) * np.nan #same sizes as data but empty, it will fill with I_sc values
     for cc in enc_coor:
         grid_Isc[cc[1],cc[0]]=I_data[cc[1],cc[0]]
-    I_region_scc.append(grid_Isc[2300:2363,57:120])
+    I_region_scc.append(grid_Isc[2270:2405,25:160])
     del grid_Isc
     tiempo.append(I_head['date-obs'])
     del I_data,I_head
@@ -172,14 +174,14 @@ for item in Q_files:
     grid_Qsc = np.empty(np.shape(Q_data)) * np.nan #same sizes as data but empty, it will fill with I_sc values
     for cc in enc_coor:
         grid_Qsc[cc[1],cc[0]]=Q_data[cc[1],cc[0]]*np.cos(2*rot_pol_ang)         #multiplying by cos(2theta) rotates Q into Q'
-    Q_region_scc.append(grid_Qsc[2300:2363,57:120])
+    Q_region_scc.append(grid_Qsc[2270:2405,25:160])
     del grid_Qsc
 Q_region_scc_avg = [np.nanmean(item) for item in Q_region_scc]                  #List of average Q in region per time
 # Q_region_scc_avg = np.array(Q_region_scc_avg)*np.cos(2*rot_pol_ang)             #Q' considering U=0
 
 ###Computing I and Q backgrounds (Considering U = 0)
 
-I_bkg = np.sqrt(np.mean(np.square(np.array(I_region_scc_avg[0:30]))))           #RMS first data
+I_bkg = np.sqrt(np.mean(np.square(np.array(I_region_scc_avg[0:20]))))           #RMS first data
 Q_bkg = np.sqrt(np.mean(np.square(np.array(Q_region_scc_avg[0:20]))))           #RMS first data
 
 ###Computing DI and DQ per time per pixel
@@ -221,7 +223,7 @@ for inter in Q_region_scc:
     grid_dq_tmp = np.empty(np.shape(inter)) * np.nan
     for i in range(len(inter)):
         for j in range(len(inter[i])):
-            if inter[i,j] > I_bkg:
+            if inter[i,j] > Q_bkg:
                 grid_dq_tmp[i,j] = inter[i,j]-Q_bkg
             elif inter[i,j] < Q_bkg:
                 grid_dq_tmp[i,j] = 0.0
@@ -239,15 +241,19 @@ for idx,inter in enumerate(DQ_DI):
             pol_m = inter[i,j]*100
             pol_t = grid_Pol[i,j]
             if pol_m<pol_t:
-                grid_Ne = ((I_region_scc[idx]/I_bkg)/I_central_avg[idx])*(pol_t/pol_m)*(1/grid_Th)
+                grid_Ne = ((I_region_scc[idx]-I_bkg)/I_central_avg[idx])*(pol_t/pol_m)*(1/grid_Th)
             else:
-                grid_Ne = ((I_region_scc[idx]/I_bkg)/I_central_avg[idx])*(1/grid_Th)
+                grid_Ne = ((I_region_scc[idx]-I_bkg)/I_central_avg[idx])*(1/grid_Th)
     Ne.append(grid_Ne)
 Ne = np.array(Ne)
-Ne_min = np.nanmin(Ne)
-Ne_max = np.nanmax(Ne)
 
-np.save('Ne_v3.npy',Ne)
+Ne[Ne<0]=0.
+np.save('Ne_v6',Ne)
+np.save('times_v6',tiempo)
+# Ne_min = np.nanmin(Ne)
+# Ne_max = np.nanmax(Ne)
+#  
+
 
 # for idx,item in enumerate(Ne):
 #     plt.imshow(item,origin='lower',cmap='rainbow',vmin=Ne_min,vmax=Ne_max,extent=[0,63*arpi,0,63*arpi])
